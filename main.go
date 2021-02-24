@@ -17,7 +17,7 @@ import (
 type Config struct {
 	AwsSecretName          string `split_words:"true" required:"true"`
 	VaultAddr              string `split_words:"true" required:"true"`
-	VaultRecoveryShare     int    `split_words:"true" default:"5"`
+	VaultRecoveryShares    int    `split_words:"true" default:"5"`
 	VaultRecoveryThreshold int    `split_words:"true" default:"3"`
 }
 
@@ -34,7 +34,7 @@ func GetConfig() Config {
 func main() {
 	c := GetConfig()
 	client := &http.Client{}
-	var jsonStr = []byte(fmt.Sprintf(`{"recovery_shares":%d, "recovery_threshold": %d}`, c.VaultRecoveryShare, c.VaultRecoveryThreshold))
+	var jsonStr = []byte(fmt.Sprintf(`{"recovery_shares":%d, "recovery_threshold": %d}`, c.VaultRecoveryShares, c.VaultRecoveryThreshold))
 	retries := 0
 	resp := &http.Response{}
 	for retries < 10 {
@@ -52,7 +52,7 @@ func main() {
 		}
 
 		if resp != nil && resp.StatusCode != 200 {
-			log.Printf("status: %d, retrying...", resp.StatusCode)
+			log.Printf("status: %d, body: %s, retrying...", resp.StatusCode, resp.Body)
 			retries += 1
 			continue
 		}
