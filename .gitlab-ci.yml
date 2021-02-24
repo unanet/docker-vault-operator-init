@@ -1,0 +1,32 @@
+stages:
+  - test
+  - dist
+  # - scan
+
+Dist:
+  stage: dist
+  script:
+    - make dist
+  tags:
+    - linux
+  only:
+    - master
+    - dev
+
+Test:
+  stage: test
+  script:
+    - make test
+  tags:
+    - linux
+  except:
+    - tags
+# Sonar Scan:
+#   stage: scan
+#   script:
+#     - make scan
+#   tags:
+#     - linux
+#   only:
+#     - master
+#     - dev
