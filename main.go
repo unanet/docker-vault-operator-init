@@ -34,6 +34,47 @@ func GetConfig() Config {
 
 func main() {
 	c := GetConfig()
+	// we need to make sure that aws api is setup correctly before doing an init on vault,
+	// so we create/update the secret to make sure we have proper access..
+	s := session.Must(session.NewSession())
+	sm := secretsmanager.New(s)
+	vs, err := sm.DescribeSecret(&secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(c.AwsSecretName),
+	})
+
+	if err != nil {
+		if _, ok := err.(*secretsmanager.ResourceNotFoundException); ok {
+			_, err := sm.CreateSecret(&secretsmanager.CreateSecretInput{
+				Description:  aws.String("Initial Vault Root Token and Recovery Keys"),
+				Name:         aws.String(c.AwsSecretName),
+				SecretString: aws.String("created"),
+			})
+			if err != nil {
+				log.Panic(err)
+			}
+		} else {
+			log.Panic(err)
+		}
+	} else {
+		if vs.DeletedDate != nil {
+			_, err = sm.RestoreSecret(&secretsmanager.RestoreSecretInput{
+				SecretId: aws.String(c.AwsSecretName),
+			})
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+	}
+
+	_, err = sm.UpdateSecret(&secretsmanager.UpdateSecretInput{
+		SecretId:     aws.String(c.AwsSecretName),
+		SecretString: aws.String("updated"),
+	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+
 	client := &http.Client{}
 	var jsonStr = []byte(fmt.Sprintf(`{"recovery_shares":%d, "recovery_threshold": %d}`, c.VaultRecoveryShares, c.VaultRecoveryThreshold))
 	retries := 0
@@ -66,7 +107,7 @@ func main() {
 	}
 
 	var respMap map[string]interface{}
-	err := json.NewDecoder(resp.Body).Decode(&respMap)
+	err = json.NewDecoder(resp.Body).Decode(&respMap)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -80,14 +121,10 @@ func main() {
 		log.Panic(err)
 	}
 
-	s := session.Must(session.NewSession())
-	sm := secretsmanager.New(s)
-	_, err = sm.CreateSecret(&secretsmanager.CreateSecretInput{
-		Description:  aws.String("Initial Vault Root Token and Recovery Keys"),
-		Name:         aws.String(c.AwsSecretName),
+	_, err = sm.UpdateSecret(&secretsmanager.UpdateSecretInput{
+		SecretId:     aws.String(c.AwsSecretName),
 		SecretString: aws.String(string(secretString)),
 	})
-
 	if err != nil {
 		log.Panic(err)
 	}
