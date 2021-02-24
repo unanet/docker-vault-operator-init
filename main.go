@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -52,7 +53,8 @@ func main() {
 		}
 
 		if resp != nil && resp.StatusCode != 200 {
-			log.Printf("status: %d, body: %s, retrying...", resp.StatusCode, resp.Body)
+			bodyBytes, _ := ioutil.ReadAll(resp.Body)
+			log.Printf("status: %d, body: %s, retrying...", resp.StatusCode, string(bodyBytes))
 			retries += 1
 			continue
 		}
