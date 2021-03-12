@@ -116,6 +116,18 @@ func main() {
 		log.Panic("missing root token")
 	}
 
+	jsonStr = []byte(`{"type": "kv", "options": {"version": "2"}}`)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v1/sys/mounts/kv", c.VaultAddr), bytes.NewBuffer(jsonStr))
+	if err != nil {
+		log.Panic(err)
+	}
+	req.Header.Add("X-Vault-Token", respMap["root_token"].(string))
+
+	_, err = client.Do(req)
+	if err != nil {
+		log.Panic(err)
+	}
+
 	secretString, err := json.Marshal(respMap)
 	if err != nil {
 		log.Panic(err)
